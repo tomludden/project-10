@@ -1,19 +1,24 @@
-const { isAuth } = require('../../middlewares/auth')
+const isAuth = require('../../middlewares/auth')
+const { uploadPoster } = require('../../middlewares/file')
 
 const {
-  getevents,
-  getBookById,
-  postBook,
-  updateBook,
-  deleteBook
+  getEvents,
+  getEventById,
+  postEvent,
+  updateEvent,
+  deleteEvent,
+  attendEvent,
+  unattendEvent
 } = require('../controllers/events')
 
 const eventsRouter = require('express').Router()
 
-eventsRouter.get('/', getevents)
-eventsRouter.get('/:id', getBookById)
-eventsRouter.post('/', isAuth, postBook)
-eventsRouter.put('/:id', isAuth, updateBook)
-eventsRouter.delete('/:id', isAuth, deleteBook)
+eventsRouter.get('/', getEvents)
+eventsRouter.get('/:id', getEventById)
+eventsRouter.post('/', isAuth, uploadPoster.single('poster'), postEvent)
+eventsRouter.put('/:id', isAuth, uploadPoster.single('poster'), updateEvent)
+eventsRouter.delete('/:id', isAuth, deleteEvent)
+eventsRouter.post('/:id/attend', isAuth, attendEvent)
+eventsRouter.delete('/:id/attend', isAuth, unattendEvent)
 
 module.exports = eventsRouter

@@ -11,17 +11,27 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.9.0",
     "bcrpyt": "^2.0.0",
     "cloudinary": "^2.6.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.15.0",
-    "multer": "^1.4.5-lts.2",
+    "mongoose": "^8.15.1",
+    "multer": "^2.0.0",
+    "multer-storage-cloudinary": "^4.0.0",
     "storage": "^0.2.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
-  }
+  },
+  "ignore": [
+    "node_modules",
+    "logs",
+    "*.test.js",
+    "public"
+  ],
+  "ext": "js,json",
+  "verbose": true
 }

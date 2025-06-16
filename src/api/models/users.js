@@ -3,17 +3,18 @@ const bcrypt = require('bcrypt')
 
 const userSchema = new mongoose.Schema(
   {
-    username: { type: String, unique: true, required: true },
+    userName: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    email: { type: String, unique: true, required: true },
-    favourites: [
-      { type: mongoose.Types.ObjectId, required: false, ref: 'events' }
-    ],
-    rol: {
-      type: String,
-      required: true,
-      default: 'user',
-      enum: ['admin', 'user']
+    avatar: { type: String, required: false },
+    attending: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Event'
+        }
+      ],
+      default: []
     }
   },
   {
@@ -22,8 +23,17 @@ const userSchema = new mongoose.Schema(
   }
 )
 
-userSchema.pre('save', function () {
+userSchema.pre('save', function (next) {
+  if (!this.isModified('password')) return next()
   this.password = bcrypt.hashSync(this.password, 10)
+  next()
+})
+
+userSchema.pre('save', function (next) {
+  if (Array.isArray(this.attending)) {
+    this.attending = [...new Set(this.attending.map((id) => id.toString()))]
+  }
+  next()
 })
 
 const User = mongoose.model('users', userSchema, 'users')

@@ -1,13 +1,17 @@
 const mongoose = require('mongoose')
 
-const eventschema = new mongoose.Schema(
+const eventSchema = new mongoose.Schema(
   {
-    title: { type: String, unique: true, required: true },
-    eventPosterImg: { type: String, required: false },
-    date: { type: Date, required: true },
+    eventName: { type: String, required: true },
+    eventPosterImg: { type: String },
+    date: { type: String, required: true },
     location: { type: String, required: true },
-    description: { type: String, required: true },
-    assistants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }]
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users',
+      required: true
+    },
+    attending: [{ type: mongoose.Schema.Types.ObjectId, ref: 'users' }]
   },
   {
     timestamps: true,
@@ -15,5 +19,5 @@ const eventschema = new mongoose.Schema(
   }
 )
 
-const Book = mongoose.model('events', eventschema, 'events')
-module.exports = Book
+const Event = mongoose.model('Event', eventSchema, 'events')
+module.exports = Event
