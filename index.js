@@ -8,7 +8,12 @@ const app = express()
 
 connectDB()
 
-app.use(cors())
+app.use(
+  cors({
+    origin: 'https://musical-fudge-fc073b.netlify.app/', // 👈 exact Netlify frontend URL
+    credentials: true // if you're using cookies or Authorization headers
+  })
+)
 
 app.use(express.json())
 
