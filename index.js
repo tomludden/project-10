@@ -15,7 +15,7 @@ app.use(express.json())
 app.use('/api/v1/events', eventsRouter)
 app.use('/api/v1/users', usersRouter)
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 10000
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)
 })
