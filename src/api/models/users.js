@@ -23,18 +23,31 @@ const userSchema = new mongoose.Schema(
   }
 )
 
-userSchema.pre('save', function (next) {
-  if (!this.isModified('password')) return next()
-  this.password = bcrypt.hashSync(this.password, 10)
-  next()
-})
+userSchema.pre('save', async function (next) {
+  try {
+    // Hash password if new or modified
+    if (this.isModified('password')) {
+      const saltRounds = 10
+      this.password = await bcrypt.hash(this.password, saltRounds)
 
-userSchema.pre('save', function (next) {
-  if (Array.isArray(this.attending)) {
-    this.attending = [...new Set(this.attending.map((id) => id.toString()))]
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`🔐 Password hashed for user: ${this.userName}`)
+      }
+    }
+
+    // Deduplicate 'attending' array
+    if (Array.isArray(this.attending)) {
+      this.attending = [...new Set(this.attending.map((id) => id.toString()))]
+    }
+
+    next()
+  } catch (err) {
+    next(err)
   }
-  next()
 })
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password)
+}
 
 const User = mongoose.model('users', userSchema, 'users')
 module.exports = User

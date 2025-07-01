@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const User = require('../../api/models/users.js')
 
-// Get all users
 const getUsers = async (req, res, next) => {
   try {
     const users = await User.find().populate('attending')
@@ -21,7 +20,6 @@ const getUserById = async (req, res, next) => {
     }
     return res.status(200).json(user)
   } catch (error) {
-    console.error('GET USER BY ID ERROR:', error)
     return res
       .status(400)
       .json({ message: 'Invalid user ID format or request' })
@@ -33,17 +31,18 @@ const register = async (req, res) => {
     const { userName, email, password } = req.body
     const avatarPath = req.file?.path
 
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
+    const existingUserByEmail = await User.findOne({ email })
+    const existingUserByName = await User.findOne({ userName })
+    if (existingUserByEmail || existingUserByName) {
       return res.status(400).json({ message: 'User already exists' })
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    /* const hashedPassword = await bcrypt.hash(password, 10) */
 
     const user = new User({
       userName,
       email,
-      password: hashedPassword,
+      password: password,
       avatar: avatarPath
     })
 
@@ -64,43 +63,56 @@ const register = async (req, res) => {
       token
     })
   } catch (error) {
-    console.error('Registration error:', error)
     res.status(500).json({ message: 'Registration failed' })
   }
 }
 
-// Login user
 const login = async (req, res) => {
-  const { userName, password } = req.body
-  console.log('Login attempt with username:', userName)
+  console.log('🛬 Login route hit with body:', req.body)
+  console.log('🔑 Login function start, received:', req.body)
 
+  const { userName, password } = req.body
   if (!userName || !password) {
+    console.log('❌ Missing username or password')
     return res
       .status(400)
       .json({ message: 'Username and password are required' })
   }
 
   try {
+    console.log('🛬 Login route hit with body:', req.body)
+    const { userName, password } = req.body
+    console.log('🧪 Received username:', userName)
+    console.log('🧪 Received password:', password)
+
     const user = await User.findOne({ userName })
     if (!user) {
+      console.log('❌ No user found for username:', userName)
       return res.status(400).json({ message: 'Username or password incorrect' })
     }
 
+    console.log('🔐 User found. DB password hash:', user.password)
+    console.log('🔑 Comparing input password:', password)
+
     const isMatch = await bcrypt.compare(password, user.password)
+    console.log('🔍 bcrypt.compare result:', isMatch)
+
     if (!isMatch) {
+      console.log('❌ Password does not match')
       return res.status(400).json({ message: 'Username or password incorrect' })
     }
 
     if (!process.env.SECRET_KEY) {
-      console.error('SECRET_KEY not defined')
-      return res.status(500).json({ message: 'JWT configuration error' })
+      console.log('❌ SECRET_KEY not set in environment variables')
+      return res.status(500).json({ message: 'Server configuration error' })
     }
 
     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
       expiresIn: '1y'
     })
+    console.log('✅ JWT token generated')
 
-    res.status(200).json({
+    return res.status(200).json({
       token,
       user: {
         _id: user._id,
@@ -111,78 +123,65 @@ const login = async (req, res) => {
       }
     })
   } catch (err) {
-    console.error('Login error:', err)
-    res.status(500).json({ message: 'Server error during login' })
+    console.error('🔥 Login error:', err)
+    return res.status(500).json({ message: 'Server error during login' })
   }
 }
 
-// Update user
 const updateUser = async (req, res) => {
   try {
-    let updateData = {}
     const { userName, email, password, eventId, remove, attending } = req.body
 
-    if (userName) updateData.userName = userName
-    if (email) updateData.email = email
+    const user = await User.findById(req.params.id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    if (userName) user.userName = userName
+    if (email) user.email = email
     if (password && password.trim().length > 0) {
-      const hashedPassword = await bcrypt.hash(password, 10)
-      updateData.password = hashedPassword
+      user.password = await bcrypt.hash(password, 10)
+    }
+
+    if (req.file) {
+      user.avatar = req.file.path
     }
 
     if (eventId) {
-      const existingUser = await User.findById(req.params.id)
-      if (!existingUser) {
-        return res.status(404).json({ message: 'User not found' })
-      }
-      let newAttending = Array.isArray(existingUser.attending)
-        ? [...existingUser.attending]
+      let newAttending = Array.isArray(user.attending)
+        ? [...user.attending]
         : []
 
       if (remove === true || remove === 'true') {
         newAttending = newAttending.filter(
           (id) => id.toString() !== eventId.toString()
         )
-      } else {
-        if (!newAttending.find((id) => id.toString() === eventId.toString())) {
-          newAttending.push(eventId)
-        }
+      } else if (
+        !newAttending.find((id) => id.toString() === eventId.toString())
+      ) {
+        newAttending.push(eventId)
       }
-      updateData.attending = newAttending
+
+      user.attending = newAttending
     }
 
     if (attending) {
       try {
-        updateData.attending = JSON.parse(attending)
-      } catch (err) {
+        user.attending = JSON.parse(attending)
+      } catch {
         return res.status(400).json({ message: 'Invalid attending format' })
       }
     }
 
-    if (req.file) {
-      updateData.avatar = req.file.path
-    }
+    await user.save()
 
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: updateData },
-      { new: true }
-    )
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' })
-    }
-
-    const token = jwt.sign({ id: updatedUser._id }, process.env.SECRET_KEY, {
+    const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
       expiresIn: '1y'
     })
 
-    console.log('Updated user in DB:', updatedUser)
-    return res.status(200).json({ user: updatedUser, token })
+    return res.status(200).json({ user, token })
   } catch (err) {
-    console.error('Error updating user:', err)
-    return res
-      .status(500)
-      .json({ message: 'Server error', message: err.message })
+    return res.status(500).json({ message: 'Server error', error: err.message })
   }
 }
 
@@ -194,15 +193,12 @@ const deleteUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found' })
     }
 
-    console.log('User deleted from DB:', deletedUser)
     res.status(200).json({ message: 'User deleted successfully' })
   } catch (error) {
-    console.error('Error deleting user:', error)
     res.status(500).json({ message: 'Server error', error: error.message })
   }
 }
 
-// Exports
 module.exports = {
   getUsers,
   getUserById,
