@@ -28,26 +28,32 @@ const getUserById = async (req, res, next) => {
 
 const register = async (req, res) => {
   try {
-    const { userName, email, password } = req.body
-    const avatarPath = req.file?.path
+    const { userName, email, password, avatar, attending } = req.body
 
-    const existingUserByEmail = await User.findOne({ email })
-    const existingUserByName = await User.findOne({ userName })
-    if (existingUserByEmail || existingUserByName) {
+    // Check if user already exists by username or email
+    const existingUser = await User.findOne({
+      $or: [{ userName }, { email }]
+    })
+    if (existingUser) {
       return res.status(400).json({ message: 'User already exists' })
     }
 
-    /* const hashedPassword = await bcrypt.hash(password, 10) */
+    // Hash password explicitly here
+    const saltRounds = 10
+    const hashedPassword = await bcrypt.hash(password, saltRounds)
 
+    // Create new user with hashed password
     const user = new User({
       userName,
       email,
-      password: password,
-      avatar: avatarPath
+      password: hashedPassword,
+      avatar,
+      attending
     })
 
     await user.save()
 
+    // Generate JWT token
     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
       expiresIn: '1y'
     })
@@ -58,75 +64,54 @@ const register = async (req, res) => {
         userName: user.userName,
         email: user.email,
         avatar: user.avatar,
-        attending: user.attending
+        attending: user.attending || []
       },
       token
     })
   } catch (error) {
+    console.error('Registration error:', error)
     res.status(500).json({ message: 'Registration failed' })
   }
 }
 
 const login = async (req, res) => {
-  console.log('🛬 Login route hit with body:', req.body)
-  console.log('🔑 Login function start, received:', req.body)
-
-  const { userName, password } = req.body
-  if (!userName || !password) {
-    console.log('❌ Missing username or password')
-    return res
-      .status(400)
-      .json({ message: 'Username and password are required' })
-  }
-
   try {
-    console.log('🛬 Login route hit with body:', req.body)
     const { userName, password } = req.body
-    console.log('🧪 Received username:', userName)
-    console.log('🧪 Received password:', password)
 
+    // Find user by userName
     const user = await User.findOne({ userName })
     if (!user) {
-      console.log('❌ No user found for username:', userName)
       return res.status(400).json({ message: 'Username or password incorrect' })
     }
 
-    console.log('🔐 User found. DB password hash:', user.password)
-    console.log('🔑 Comparing input password:', password)
-
-    const isMatch = await bcrypt.compare(password, user.password)
-    console.log('🔍 bcrypt.compare result:', isMatch)
-
+    // Use comparePassword method defined on userSchema
+    const isMatch = await user.comparePassword(password)
     if (!isMatch) {
-      console.log('❌ Password does not match')
       return res.status(400).json({ message: 'Username or password incorrect' })
     }
 
-    if (!process.env.SECRET_KEY) {
-      console.log('❌ SECRET_KEY not set in environment variables')
-      return res.status(500).json({ message: 'Server configuration error' })
-    }
-
+    // Generate JWT token
     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
       expiresIn: '1y'
     })
-    console.log('✅ JWT token generated')
 
-    return res.status(200).json({
-      token,
+    res.status(200).json({
       user: {
         _id: user._id,
         userName: user.userName,
         email: user.email,
         avatar: user.avatar,
-        attending: user.attending
-      }
+        attending: user.attending || []
+      },
+      token
     })
-  } catch (err) {
-    console.error('🔥 Login error:', err)
-    return res.status(500).json({ message: 'Server error during login' })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ message: 'Login failed' })
   }
 }
+
+module.exports = { register, login }
 
 const updateUser = async (req, res) => {
   try {

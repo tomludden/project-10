@@ -7,6 +7,7 @@ const usersRouter = require('./src/api/routes/users.js')
 const User = require('./src/api/models/users.js')
 
 const app = express()
+app.use(express.json())
 
 connectDB()
 
@@ -15,8 +16,6 @@ app.use(
     origin: process.env.CORS_ORIGIN || '*'
   })
 )
-
-app.use(express.json())
 
 app.get('/test', (req, res) => {
   console.log('✅ /test route hit')
@@ -61,7 +60,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Server error' })
 })
 
-const PORT = process.env.PORT || 10000
+const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
 })
