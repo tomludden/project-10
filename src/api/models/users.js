@@ -19,13 +19,11 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true
-    /* collection: 'users' */
   }
 )
 
 userSchema.pre('save', async function (next) {
   try {
-    // Deduplicate 'attending' array
     if (Array.isArray(this.attending)) {
       this.attending = [...new Set(this.attending.map((id) => id.toString()))]
     }

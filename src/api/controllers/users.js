@@ -30,7 +30,6 @@ const register = async (req, res) => {
   try {
     const { userName, email, password, avatar, attending } = req.body
 
-    // Check if user already exists by username or email
     const existingUser = await User.findOne({
       $or: [{ userName }, { email }]
     })
@@ -38,11 +37,9 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' })
     }
 
-    // Hash password explicitly here
     const saltRounds = 10
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    // Create new user with hashed password
     const user = new User({
       userName,
       email,
@@ -53,7 +50,6 @@ const register = async (req, res) => {
 
     await user.save()
 
-    // Generate JWT token
     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
       expiresIn: '1y'
     })
@@ -78,19 +74,16 @@ const login = async (req, res) => {
   try {
     const { userName, password } = req.body
 
-    // Find user by userName
     const user = await User.findOne({ userName })
     if (!user) {
       return res.status(400).json({ message: 'Username or password incorrect' })
     }
 
-    // Use comparePassword method defined on userSchema
     const isMatch = await user.comparePassword(password)
     if (!isMatch) {
       return res.status(400).json({ message: 'Username or password incorrect' })
     }
 
-    // Generate JWT token
     const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
       expiresIn: '1y'
     })
@@ -110,8 +103,6 @@ const login = async (req, res) => {
     res.status(500).json({ message: 'Login failed' })
   }
 }
-
-module.exports = { register, login }
 
 const updateUser = async (req, res) => {
   try {

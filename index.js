@@ -7,6 +7,7 @@ const usersRouter = require('./src/api/routes/users.js')
 const User = require('./src/api/models/users.js')
 
 const app = express()
+
 app.use(express.json())
 
 connectDB()
@@ -17,29 +18,15 @@ app.use(
   })
 )
 
-app.get('/test', (req, res) => {
-  console.log('✅ /test route hit')
-  res.send('Server is working')
-})
-
-app.use((req, res, next) => {
-  console.log(`➡️ ${req.method} ${req.path}`, req.body)
-  next()
-})
-
 app.post('/register', async (req, res) => {
-  console.log('🔥 Incoming request body:', req.body)
-  console.log('📦 Type of req.body:', typeof req.body)
+  console.log('Incoming request body:', req.body)
 
   try {
     const newUser = new User(req.body)
-    console.log('🧱 Mongoose userName:', newUser.userName)
-
     await newUser.save()
-
     res.status(201).json({ message: 'User created' })
   } catch (err) {
-    console.error('💥 Error creating user:', err)
+    console.error('Error creating user:', err)
     res.status(500).json({ error: 'Something went wrong' })
   }
 })

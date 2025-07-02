@@ -18,7 +18,6 @@ const avatarStorage = new CloudinaryStorage({
 
 const uploadAvatar = multer({ storage: avatarStorage })
 
-// Poster Upload
 const posterStorage = new CloudinaryStorage({
   cloudinary,
   params: {
